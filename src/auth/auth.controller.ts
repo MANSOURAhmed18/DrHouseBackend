@@ -6,6 +6,7 @@ import { RefreshTokenDto } from './dto/refresh-tokens.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthGuard } from './guards/auth.guard';
 import { ForgotPasswordDto } from './dto/forget-password.dto';
+import { VerifyResetDto } from './dto/verifyreset.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -57,4 +58,9 @@ export class AuthController {
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto.email);
     }
+    @Post('verify-reset')
+async verifyReset(@Body() verifyResetDto: VerifyResetDto) {
+  const { resetToken, newPassword } = verifyResetDto;
+  return this.authService.verifyReset(resetToken, newPassword);
+}
 }
