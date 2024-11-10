@@ -1,11 +1,15 @@
-import { Controller, Post, Body, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, UnauthorizedException, Put, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signupdto.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-tokens.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthGuard } from './guards/auth.guard';
+import { ForgotPasswordDto } from './dto/forget-password.dto';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService) { }
 
     @Post('signup')
     async signUp(@Body() signupDto: SignupDto) {
@@ -31,5 +35,26 @@ export class AuthController {
             }
             throw new BadRequestException('An unexpected error occurred');
         }
+    }
+
+    @Post('refresh')
+    async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
+        return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+    }
+    @UseGuards(AuthGuard)
+    @Put('change-password')
+    async changePassword(
+        @Body() changePasswordDto: ChangePasswordDto,
+        @Req() req,
+    ) {
+        return this.authService.changePassword(
+            req.userId,
+            changePasswordDto.oldPassword,
+            changePasswordDto.newPassword,
+        );
+    }
+    @Post('forgot-password')
+    async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+        return this.authService.forgotPassword(forgotPasswordDto.email);
     }
 }
