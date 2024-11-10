@@ -8,14 +8,19 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshToken } from './schemas/refresh-token.schema';
 import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
+import { ResetToken } from './schemas/reset-token.schema';
+import { MailService } from 'src/services/mail.service';
 
 
 
 @Injectable()
 export class AuthService {
     constructor(@InjectModel(User.name) private userModel: Model<User>
-        , @InjectModel('RefreshToken') private refreshTokenModel: Model<RefreshToken>,
-        private jwtService: JwtService
+        , @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshToken>,
+         @InjectModel(ResetToken.name) private resetTokenModel: Model<ResetToken>,
+        private jwtService: JwtService,
+        private readonly mailService: MailService,
     ) { }
 
 
@@ -123,9 +128,45 @@ export class AuthService {
       }
 
       async forgotPassword(email: string) {
-        // check that user exist 
-        // if user exist  , generate password reset link 
-        // send the link to the use by email 
+        const user = await this.userModel.findOne({ email });
+        if (user) {
+          const resetToken = nanoid(64);
+          const expiryDate = new Date();
+          expiryDate.setHours(expiryDate.getHours() + 1);
+          
+          await this.resetTokenModel.create({
+            token: resetToken,
+            userId: user._id,
+            expiryDate,
+          });
+    
+          // Send the reset email
+          await this.mailService.sendPasswordResetEmail(email, resetToken);
+        }
+        return { message: 'If the user exists, they will receive an email with instructions.' };
       }
+    
+
+      async verifyReset(resetToken: string, newPassword: string) {
+        const tokenEntry = await this.resetTokenModel.findOne({ token: resetToken });
+        if (!tokenEntry || tokenEntry.expiryDate < new Date()) {
+          throw new UnauthorizedException('Invalid or expired reset code');
+        }
+      
+        const user = await this.userModel.findById(tokenEntry.userId);
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
+      
+        // Update the password
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+      
+        // Delete the used reset token
+        await this.resetTokenModel.deleteOne({ token: resetToken });
+      
+        return { message: 'Password successfully updated' };
+      }
+      
 
 }
