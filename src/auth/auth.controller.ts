@@ -58,9 +58,8 @@ export class AuthController {
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto.email);
     }
-    @Post('verify-reset')
-async verifyReset(@Body() verifyResetDto: VerifyResetDto) {
-  const { resetToken, newPassword } = verifyResetDto;
-  return this.authService.verifyReset(resetToken, newPassword);
-}
+    @Post('reset-password')
+  async resetPassword(@Body() verifyResetDto: VerifyResetDto): Promise<void> {
+    await this.authService.verifyReset(verifyResetDto.resetToken, verifyResetDto.newPassword);
+  }
 }

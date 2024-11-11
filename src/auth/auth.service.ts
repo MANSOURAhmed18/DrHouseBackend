@@ -127,46 +127,45 @@ export class AuthService {
         await user.save();
       }
 
-      async forgotPassword(email: string) {
+      async forgotPassword(email: string): Promise<void> {
         const user = await this.userModel.findOne({ email });
-        if (user) {
-          const resetToken = nanoid(64);
-          const expiryDate = new Date();
-          expiryDate.setHours(expiryDate.getHours() + 1);
-          
-          await this.resetTokenModel.create({
-            token: resetToken,
-            userId: user._id,
-            expiryDate,
-          });
-    
-          // Send the reset email
-          await this.mailService.sendPasswordResetEmail(email, resetToken);
+        if (!user) {
+          throw new NotFoundException('User not found');
         }
-        return { message: 'If the user exists, they will receive an email with instructions.' };
+    
+        // Generate a reset token
+        const resetToken = uuidv4();
+    
+        // Save the reset token to the database
+        await this.resetTokenModel.create({
+          userId: user._id,
+          token: resetToken,
+          expiryDate: new Date(Date.now() + 3600000), // 1 hour expiry
+        });
+    
+        // Send the reset token via email
+        await this.mailService.sendResetEmail(user.email, resetToken);
       }
     
-
-      async verifyReset(resetToken: string, newPassword: string) {
+    
+      async verifyReset(resetToken: string, newPassword: string): Promise<void> {
         const tokenEntry = await this.resetTokenModel.findOne({ token: resetToken });
         if (!tokenEntry || tokenEntry.expiryDate < new Date()) {
-          throw new UnauthorizedException('Invalid or expired reset code');
+          throw new UnauthorizedException('Invalid or expired reset token');
         }
-      
+    
+        // Find the user associated with the reset token
         const user = await this.userModel.findById(tokenEntry.userId);
         if (!user) {
           throw new NotFoundException('User not found');
         }
-      
-        // Update the password
-        user.password = await bcrypt.hash(newPassword, 10);
+    
+        // Hash the new password and update the user record
+        const newHashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = newHashedPassword;
         await user.save();
-      
-        // Delete the used reset token
+    
+        // Remove the used reset token
         await this.resetTokenModel.deleteOne({ token: resetToken });
-      
-        return { message: 'Password successfully updated' };
       }
-      
-
 }
