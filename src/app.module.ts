@@ -8,6 +8,10 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
 import { MailService } from './services/mail.service';
+import { PredictionModule } from './prediction/prediction.module';
+import { ProductModule } from './product/product.module';
+import { CategoryModule } from './category/category.module';
+import { GoalsModule } from './goals/goals.module';
 
 
 @Module({
@@ -34,6 +38,10 @@ import { MailService } from './services/mail.service';
         },
       },
     }),
+    PredictionModule,
+    ProductModule,
+    CategoryModule,
+    GoalsModule,
   ],
   controllers: [AppController],
   providers: [AppService, MailService],

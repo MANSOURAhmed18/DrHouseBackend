@@ -2,22 +2,25 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SignupDto } from './dto/signupdto.dto';
-import { User } from './schemas/user.schema';
+import { User } from '../schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
-import { RefreshToken } from './schemas/refresh-token.schema';
+import { RefreshToken } from '../schemas/refresh-token.schema';
 import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
-import { ResetToken } from './schemas/reset-token.schema';
+import { ResetToken } from '../schemas/reset-token.schema';
 import { MailService } from 'src/services/mail.service';
+import { randomInt } from 'crypto'; // Import randomInt to generate the code
 
 
 
 @Injectable()
 export class AuthService {
-    constructor(@InjectModel(User.name) private userModel: Model<User>
-        , @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshToken>,
+    constructor(@InjectModel(User.name) private userModel: Model<User>,
+    
+
+         @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshToken>,
          @InjectModel(ResetToken.name) private resetTokenModel: Model<ResetToken>,
         private jwtService: JwtService,
         private readonly mailService: MailService,
@@ -42,25 +45,35 @@ export class AuthService {
 
     async login(credentials: LoginDto) {
         const { email, password } = credentials;
-        //Find if user exists by email
+        // Find if user exists by email
         const user = await this.userModel.findOne({ email });
         if (!user) {
-            throw new UnauthorizedException('Wrong credentials');
+          throw new UnauthorizedException('Wrong credentials');
         }
-
-        //Compare entered password with existing password
+      
+        // Compare entered password with existing password
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
-            throw new UnauthorizedException('Wrong credentials');
+          throw new UnauthorizedException('Wrong credentials');
         }
-
-        //Generate JWT tokens
+      
+        // Check if it's the user's first login
+        const isFirstLogin = user.isFirstLogin;
+      
+        // If it's the first login, update the flag
+        if (isFirstLogin) {
+          user.isFirstLogin = false;
+          await user.save();
+        }
+      
+        // Generate JWT tokens
         const tokens = await this.generateUserToken(user._id);
         return {
-            ...tokens,
-            userId: user._id,
+          ...tokens,
+          userId: user._id,
+          isFirstLogin,
         };
-    }
+      }
 
     async refreshTokens(refreshToken: string) {
         const token = await this.refreshTokenModel.findOne({
@@ -82,7 +95,7 @@ export class AuthService {
     //return acces token and refresh token 
     async generateUserToken(userId) {
 
-        const accestoken = this.jwtService.sign({ userId }, { expiresIn: '1h' });
+        const accestoken = this.jwtService.sign({ userId }, { expiresIn: 30  });
 
         const refreshToken = uuidv4();
         await this.storeRefreshToken(refreshToken, userId);
@@ -115,7 +128,7 @@ export class AuthService {
           throw new NotFoundException('User not found');
         }
     
-        // Compare the old password with the stored password
+        /// Compare the old password with the stored password
         const passwordMatch = await bcrypt.compare(oldPassword, user.password);
         if (!passwordMatch) {
           throw new UnauthorizedException('Wrong credentials');
@@ -130,22 +143,22 @@ export class AuthService {
       async forgotPassword(email: string): Promise<void> {
         const user = await this.userModel.findOne({ email });
         if (!user) {
-          throw new NotFoundException('User not found');
+            throw new NotFoundException('User not found');
         }
-    
-        // Generate a reset token
-        const resetToken = uuidv4();
-    
-        // Save the reset token to the database
+
+        // Generate a 4-digit reset code
+        const resetCode = randomInt(1000, 9999).toString();
+
+        // Save the reset code to the database
         await this.resetTokenModel.create({
-          userId: user._id,
-          token: resetToken,
-          expiryDate: new Date(Date.now() + 3600000), // 1 hour expiry
+            userId: user._id,
+            token: resetCode,
+            expiryDate: new Date(Date.now() + 3600000), // 1 hour expiry
         });
-    
-        // Send the reset token via email
-        await this.mailService.sendResetEmail(user.email, resetToken);
-      }
+
+        // Send the reset code via email
+        await this.mailService.sendResetEmail(user.email, resetCode);
+    }
     
     
       async verifyReset(resetToken: string, newPassword: string): Promise<void> {
@@ -168,4 +181,36 @@ export class AuthService {
         // Remove the used reset token
         await this.resetTokenModel.deleteOne({ token: resetToken });
       }
+      async verifyResetCode(email: string, code: string): Promise<boolean> {
+        const user = await this.userModel.findOne({ email });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const tokenEntry = await this.resetTokenModel.findOne({ userId: user._id, token: code });
+        if (!tokenEntry || tokenEntry.expiryDate < new Date()) {
+            return false;
+        }
+
+        return true;
+    }
+    async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+      const isValid = await this.verifyResetCode(email, code);
+      if (!isValid) {
+          throw new UnauthorizedException('Invalid or expired reset code');
+      }
+
+      const user = await this.userModel.findOne({ email });
+      if (!user) {
+          throw new NotFoundException('User not found');
+      }
+
+      // Hash the new password and update the user record
+      const newHashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = newHashedPassword;
+      await user.save();
+
+      // Remove the used reset code
+      await this.resetTokenModel.deleteOne({ userId: user._id, token: code });
+  }
 }
