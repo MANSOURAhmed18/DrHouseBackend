@@ -3,9 +3,9 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { User, UserSchema } from './schemas/user.schema';
-import { RefreshToken, RefreshTokenSchema } from './schemas/refresh-token.schema';
-import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema';
+import { User, UserSchema } from '../schemas/user.schema';
+import { RefreshToken, RefreshTokenSchema } from '../schemas/refresh-token.schema';
+import { ResetToken, ResetTokenSchema } from '../schemas/reset-token.schema';
 import { MailModule } from './mail.module';
 
 

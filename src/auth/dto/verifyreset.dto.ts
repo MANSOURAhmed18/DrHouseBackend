@@ -1,8 +1,11 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class VerifyResetDto {
+  @IsEmail()
+  email: string;
+
   @IsString()
-  resetToken: string;
+  code: string;
 
   @IsString()
   @MinLength(6)

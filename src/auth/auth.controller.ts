@@ -7,6 +7,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthGuard } from './guards/auth.guard';
 import { ForgotPasswordDto } from './dto/forget-password.dto';
 import { VerifyResetDto } from './dto/verifyreset.dto';
+import { VerifyResetCodeDto } from './dto/VerifyResetCodeDto';
 
 @Controller('auth')
 export class AuthController {
@@ -54,12 +55,22 @@ export class AuthController {
             changePasswordDto.newPassword,
         );
     }
-    @Post('forgot-password')
+   @Post('forgot-password')
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto.email);
     }
+
+    @Post('verify-reset-code')
+    async verifyResetCode(@Body() verifyResetCodeDto: VerifyResetCodeDto) {
+        const isValid = await this.authService.verifyResetCode(verifyResetCodeDto.email, verifyResetCodeDto.code);
+        if (!isValid) {
+            throw new BadRequestException('Invalid reset code');
+        }
+        return { message: 'Reset code verified' };
+    }
+
     @Post('reset-password')
-  async resetPassword(@Body() verifyResetDto: VerifyResetDto): Promise<void> {
-    await this.authService.verifyReset(verifyResetDto.resetToken, verifyResetDto.newPassword);
-  }
+    async resetPassword(@Body() verifyResetDto: VerifyResetDto): Promise<void> {
+        await this.authService.resetPassword(verifyResetDto.email, verifyResetDto.code, verifyResetDto.newPassword);
+    }
 }

@@ -8,10 +8,25 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { join } from 'path';
 import { MailService } from './services/mail.service';
-
+import { PredictionModule } from './prediction/prediction.module';
+import { ProductModule } from './product/product.module';
+import { GoalsModule } from './goals/goals.module';
+import { TrackingModule } from './tracking/tracking.module';
+import { ProgressModule } from './progress/progress.module';
+import { OcrModule } from './ocr/ocr.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
+    // ServeStaticModule for serving static files
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // Path to uploads directory
+      serveRoot: '/uploads', // URL prefix for accessing static files
+    }),
+    MulterModule.register({
+      dest: './uploads', // Temporary storage for uploaded files
+    }),
     AuthModule,
     MongooseModule.forRoot('mongodb://localhost:27017/Backend'),
     JwtModule.register({ global: true, secret: '123' }),
@@ -34,6 +49,12 @@ import { MailService } from './services/mail.service';
         },
       },
     }),
+    PredictionModule,
+    ProductModule,
+    GoalsModule,
+    TrackingModule,
+    ProgressModule,
+    OcrModule,
   ],
   controllers: [AppController],
   providers: [AppService, MailService],
