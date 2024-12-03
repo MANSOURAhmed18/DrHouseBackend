@@ -1,31 +1,21 @@
-import { IsString, IsNumber, IsBoolean, IsOptional, Min, IsNotEmpty } from 'class-validator';
+import { IsString, IsNumber } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
-  @IsNotEmpty()
-  title: string;
+  id: string;
 
   @IsString()
-  @IsNotEmpty()
+  name: string;
+
+  @IsString()
   description: string;
 
-  @IsString()
-  @IsNotEmpty()
-  image: string;
-
   @IsNumber()
-  @Min(0)
-  price: number;
+  price?: number;
 
   @IsString()
-  @IsNotEmpty()
-  category: string; // Category ID, typically a MongoDB ObjectId
+  category: string;
 
-  @IsOptional()
-  @IsBoolean()
-  requiresPrescription?: boolean;
-
-  @IsNumber()
-  @Min(0)
-  stock: number;
+  @IsString()
+  image?: string;
 }

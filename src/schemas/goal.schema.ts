@@ -21,6 +21,9 @@ export class Goal extends Document {
 
   @Prop({ required: true })
   workout: number;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
 }
 
 export const GoalSchema = SchemaFactory.createForClass(Goal);

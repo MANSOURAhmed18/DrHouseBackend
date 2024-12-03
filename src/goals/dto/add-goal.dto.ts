@@ -1,6 +1,6 @@
 import { IsInt, IsPositive } from 'class-validator';
 
-export class AddGoalDto {
+export class AddGoalDto  {
   @IsInt()
   @IsPositive()
   steps: number;

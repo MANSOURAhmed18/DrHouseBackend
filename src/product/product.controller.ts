@@ -1,69 +1,101 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { Product } from 'src/schemas/product.schema';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
-@Controller('products')
+@Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  // Create a new product
-  @Post()
-  async create(@Body() createProductDto: CreateProductDto): Promise<Product> {
-    try {
-      return await this.productService.create(createProductDto);
-    } catch (error) {
-      throw new HttpException(
-        'Error creating product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+  @Post('')
+  async create(@Body() createProductDto: CreateProductDto) {
+    return this.productService.create(createProductDto);
   }
 
   // Get all products
   @Get()
-  async findAll(): Promise<Product[]> {
-    return await this.productService.findAll();
+  findAll() {
+    return this.productService.findAll();
   }
 
   // Get a single product by ID
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Product> {
-    try {
-      return await this.productService.findOne(id);
-    } catch (error) {
-      throw new HttpException('Product not found', HttpStatus.NOT_FOUND);
-    }
+  findOne(@Param('id') id: string) {
+    return this.productService.findOne(id);
   }
 
-  // Update a product by ID
-  @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateProductDto: UpdateProductDto,
-  ): Promise<Product> {
-    try {
-      return await this.productService.update(id, updateProductDto);
-    } catch (error) {
-      throw new HttpException(
-        'Error updating product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+  // Update a product
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+    return this.productService.update(id, updateProductDto);
   }
 
-  // Delete a product by ID
+  // Remove a product
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<Product> {
-    try {
-      return await this.productService.delete(id);
-    } catch (error) {
-      throw new HttpException(
-        'Error deleting product',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+  remove(@Param('id') id: string) {
+    return this.productService.remove(id);
+  }
+
+  // Find products by category
+  @Get('category/:category')
+  findByCategory(@Param('category') category: string) {
+    return this.productService.findByCategory(category);
+  }
+
+  // Upload an image for an existing product
+  @Post(':id/upload')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads', // Folder to save images
+        filename: (req, file, callback) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const filePath = `/uploads/${file.filename}`; // Path where the image is stored
+    return this.productService.addImage(id, filePath);
+  }
+
+  // Test image upload
+  @Post(':id/upload/test')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/test', // Folder to save test images
+        filename: (req, file, callback) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async testUploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const filePath = `/uploads/test/${file.filename}`; // Path where the test image is stored
+    return { message: 'Test image uploaded successfully', filePath };
   }
 }
-
