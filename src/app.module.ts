@@ -17,7 +17,7 @@ import { OcrModule } from './ocr/ocr.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { MulterModule } from '@nestjs/platform-express';
 import { AdminModule } from './admin/admin.module';
-
+import { ReclamationModule } from './reclamation/reclamation.module';
 @Module({
   imports: [
     // ServeStaticModule for serving static files
@@ -58,6 +58,7 @@ import { AdminModule } from './admin/admin.module';
     OcrModule,
     AuthModule,
     AdminModule,
+    ReclamationModule,
     
     
   ],
