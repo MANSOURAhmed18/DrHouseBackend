@@ -1,3 +1,4 @@
+// src/auth/guards/auth.guard.ts
 import {
     Injectable,
     CanActivate,
@@ -6,37 +7,36 @@ import {
     ForbiddenException,
     Logger,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { Observable } from 'rxjs';
-import { AuthService } from 'src/auth/auth.service';
-import {Request} from 'express';
-
+import { Request } from 'express';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    constructor(private jwtService: JwtService) { }
+    private readonly logger = new Logger(AuthGuard.name);
+    
+    constructor(private jwtService: JwtService) {}
 
-    canActivate(context: ExecutionContext): boolean | Promise <boolean> | Observable < boolean > {
+    async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeadear(request);
-        if(!token){
+        const token = this.extractTokenFromHeader(request);
+        
+        if (!token) {
             throw new UnauthorizedException('Token not found');
         }
-     
 
-        try{
-            const payload = this.jwtService.verify(token);
-            request.userId = payload.userId;
-        }
-        catch(e){
-            Logger.error(e.message);
+        try {
+            const payload = await this.jwtService.verify(token);
+            // Attach userId to request
+            request.user = { userId: payload.userId, role: payload.role  };
+            return true;
+        } catch (e) {
+            this.logger.error(`Auth error: ${e.message}`);
             throw new ForbiddenException('Invalid token');
         }
-        return true;
     }
 
-    private extractTokenFromHeadear(request: Request): string | undefined {
-        return request.headers.authorization?.split(' ')[1];
+    private extractTokenFromHeader(request: Request): string | undefined {
+        const [type, token] = request.headers.authorization?.split(' ') ?? [];
+        return type === 'Bearer' ? token : undefined;
     }
 }

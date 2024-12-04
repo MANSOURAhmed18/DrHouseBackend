@@ -1,13 +1,20 @@
-import { IsEmail, IsString, Matches, MinLength } from "class-validator"
+// src/auth/dto/signupdto.dto.ts
+import { IsEmail, IsString, Matches, MinLength, IsEnum, IsOptional } from "class-validator"
+import { UserRole } from "../../schemas/user.schema";
 
-export class SignupDto{
+export class SignupDto {
     @IsString()
-    name:string
+    name: string;
+
     @IsEmail()
-    email:string
+    email: string;
+
     @IsString()
     @MinLength(10, { message: 'password must not be less than 10 characters' })
     @Matches(/^(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/, { message: 'password must contain at least one number' })
-    password:string
+    password: string;
 
+    @IsEnum(UserRole)
+    @IsOptional()
+    role?: UserRole;
 }

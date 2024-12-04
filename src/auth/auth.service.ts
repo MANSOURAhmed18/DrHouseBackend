@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SignupDto } from './dto/signupdto.dto';
-import { User } from '../schemas/user.schema';
+import { User, UserRole } from '../schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -12,11 +12,15 @@ import { nanoid } from 'nanoid';
 import { ResetToken } from '../schemas/reset-token.schema';
 import { MailService } from 'src/services/mail.service';
 import { randomInt } from 'crypto'; // Import randomInt to generate the code
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { PaginatedResponse } from 'src/interfaces/paginated-response.interface';
+import { UserResponse } from 'src/interfaces/user-response.interface';
 
 
 
 @Injectable()
 export class AuthService {
+    
     constructor(@InjectModel(User.name) private userModel: Model<User>,
     
 
@@ -25,6 +29,34 @@ export class AuthService {
         private jwtService: JwtService,
         private readonly mailService: MailService,
     ) { }
+
+    async createSuperAdmin(signupData: SignupDto): Promise<User> {
+        // First check if a super admin already exists
+        const superAdminExists = await this.userModel.findOne({ role: UserRole.SUPER_ADMIN });
+        if (superAdminExists) {
+            throw new BadRequestException('Super Admin already exists');
+        }
+
+        const { email, name, password } = signupData;
+        const emailInUse = await this.userModel.findOne({ email });
+
+        if (emailInUse) {
+            throw new BadRequestException('Email already in use');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Create the super admin user
+        const superAdmin = await this.userModel.create({
+            email,
+            name,
+            password: hashedPassword,
+            role: UserRole.SUPER_ADMIN,
+            isFirstLogin: true
+        });
+
+        return superAdmin;
+    }
 
 
     async signUp(signupData: SignupDto) {
@@ -42,6 +74,13 @@ export class AuthService {
             password: hashedPassword,
         });
     }
+    async findUserById(userId: string): Promise<User> {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        return user;
+    }
 
     async login(credentials: LoginDto) {
         const { email, password } = credentials;
@@ -49,6 +88,9 @@ export class AuthService {
         const user = await this.userModel.findOne({ email });
         if (!user) {
           throw new UnauthorizedException('Wrong credentials');
+        }
+        if (!user.isActive) {
+            throw new ForbiddenException('Account is deactivated');
         }
       
         // Compare entered password with existing password
@@ -94,8 +136,11 @@ export class AuthService {
 
     //return acces token and refresh token 
     async generateUserToken(userId) {
-
-        const accestoken = this.jwtService.sign({ userId }, { expiresIn: 30  });
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        const accestoken = this.jwtService.sign({ userId,role: user.role }, { expiresIn: '2h'  });
 
         const refreshToken = uuidv4();
         await this.storeRefreshToken(refreshToken, userId);
@@ -213,4 +258,114 @@ export class AuthService {
       // Remove the used reset code
       await this.resetTokenModel.deleteOne({ userId: user._id, token: code });
   }
+
+  async updateUserRole(userId: string, newRole: UserRole): Promise<User> {
+    const user = await this.userModel.findById(userId);
+    
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Prevent changing super_admin role
+    if (user.role === UserRole.SUPER_ADMIN) {
+        throw new ForbiddenException('Cannot modify super admin role');
+    }
+
+    // Update the user's role
+    user.role = newRole;
+    return await user.save();
+}
+async updateAccountStatus(userId: string, isActive: boolean, adminRole: string): Promise<User> {
+    const user = await this.userModel.findById(userId);
+    
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Prevent deactivating super_admin accounts if the requester is not a super_admin
+    if (user.role === UserRole.SUPER_ADMIN && adminRole !== UserRole.SUPER_ADMIN) {
+        throw new ForbiddenException('Cannot modify super admin account status');
+    }
+
+    user.isActive = isActive;
+    await user.save();
+
+    return user;
+}
+
+
+
+async getAllUsers(query: GetUsersQueryDto): Promise<PaginatedResponse<UserResponse>> {
+    try {
+        const {
+            page = 1,
+            limit = 10,
+            search,
+            role,
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = query;
+
+        // Build filter conditions
+        const filter: any = {};
+
+        // Add search functionality
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Add role filter
+        if (role) {
+            filter.role = role;
+        }
+
+        // Calculate skip value for pagination
+        const skip = (page - 1) * limit;
+
+        // Build sort object
+        const sort: any = {};
+        sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+        // Execute query with pagination
+        const [users, total] = await Promise.all([
+            this.userModel
+                .find(filter)
+                .select('_id name email role isActive createdAt')
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .exec(),
+            this.userModel.countDocuments(filter)
+        ]);
+
+        // Calculate total pages
+        const totalPages = Math.ceil(total / limit);
+
+        // Return paginated response
+        return {
+            data: users.map(user => ({
+                _id: user._id.toString(),
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                createdAt: user.createdAt
+            })),
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages
+            }
+        };
+    } catch (error) {
+        throw new BadRequestException('Failed to fetch users: ' + error.message);
+    }
+}
+
+
+
 }

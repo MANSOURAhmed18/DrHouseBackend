@@ -16,6 +16,7 @@ import { ProgressModule } from './progress/progress.module';
 import { OcrModule } from './ocr/ocr.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { MulterModule } from '@nestjs/platform-express';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { MulterModule } from '@nestjs/platform-express';
     MulterModule.register({
       dest: './uploads', // Temporary storage for uploaded files
     }),
-    AuthModule,
+    
     MongooseModule.forRoot('mongodb://localhost:27017/Backend'),
     JwtModule.register({ global: true, secret: '123' }),
     MailerModule.forRoot({
@@ -55,6 +56,10 @@ import { MulterModule } from '@nestjs/platform-express';
     TrackingModule,
     ProgressModule,
     OcrModule,
+    AuthModule,
+    AdminModule,
+    
+    
   ],
   controllers: [AppController],
   providers: [AppService, MailService],
