@@ -1,6 +1,6 @@
 // src/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export enum UserRole {
     USER = 'user',
@@ -27,6 +27,10 @@ export class User extends Document {
 
     @Prop({ default: true })
     isActive: boolean;
+    
+    @Prop({ type: [Types.ObjectId], ref: 'Goal' })
+    goals: Types.ObjectId[];
+    
     @Prop()
     createdAt?: Date;
 }
