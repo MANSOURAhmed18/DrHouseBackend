@@ -31,8 +31,8 @@ export class User extends Document {
     @Prop({ type: [Types.ObjectId], ref: 'Goal' })
     goals: Types.ObjectId[];
     
-    @Prop()
-    createdAt?: Date;
+    @Prop({ default: Date.now })
+    createdAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

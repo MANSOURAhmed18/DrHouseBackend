@@ -26,6 +26,45 @@ export class MailService {
     });
   }
 
+  async sendEmail(to: string, subject: string, content: string): Promise<void> {
+    const mailOptions = {
+      from: `Auth-backend service <${process.env.GMAIL_USER}>`,
+      to: to,
+      subject: subject,
+      text: content,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email');
+    }
+  }
+
+  async sendWelcomeEmail(email: string, name: string, isAdmin: boolean): Promise<void> {
+    const subject = isAdmin 
+        ? 'Welcome to Our Platform - Admin Account Created'
+        : 'Welcome to Our Platform';
+
+    const content = isAdmin
+        ? `Dear ${name},\n\nYour admin account has been successfully created. Welcome to our platform!\n\nBest regards,\nThe Team`
+        : `Dear ${name},\n\nWelcome to our platform! Your account has been successfully created.\n\nBest regards,\nThe Team`;
+
+    await this.sendEmail(email, subject, content);
+  }
+  async sendreclayionEmail(email: string, name: string, isAdmin: boolean): Promise<void> {
+    const subject = isAdmin 
+        ? 'Welcome to Our Platform - Admin Account Created'
+        : 'Welcome to Our Platform';
+
+    const content = isAdmin
+        ? `Dear ${name},\n\nYour admin account has been successfully created. Welcome to our platform!\n\nBest regards,\nThe Team`
+        : `Dear ${name},\n\nWelcome to our platform! Your account has been successfully created.\n\nBest regards,\nThe Team`;
+
+    await this.sendEmail(email, subject, content);
+  }
+
   async sendResetEmail(email: string, resetCode: string): Promise<void> {
     const mailOptions = {
       from: `Auth-backend service <${process.env.GMAIL_USER}>`,

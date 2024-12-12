@@ -15,6 +15,8 @@ import { randomInt } from 'crypto'; // Import randomInt to generate the code
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { PaginatedResponse } from 'src/interfaces/paginated-response.interface';
 import { UserResponse } from 'src/interfaces/user-response.interface';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
 
 
 
@@ -30,14 +32,14 @@ export class AuthService {
         private readonly mailService: MailService,
     ) { }
 
-    async createSuperAdmin(signupData: SignupDto): Promise<User> {
-        // First check if a super admin already exists
-        const superAdminExists = await this.userModel.findOne({ role: UserRole.SUPER_ADMIN });
-        if (superAdminExists) {
+    async sigupasAdmin(signupData: SignupDto): Promise<User> {
+        const { email, name, password } = signupData;
+        const AdminExists = await this.userModel.findOne({ email });
+        if (AdminExists) {
             throw new BadRequestException('Super Admin already exists');
         }
 
-        const { email, name, password } = signupData;
+        
         const emailInUse = await this.userModel.findOne({ email });
 
         if (emailInUse) {
@@ -47,15 +49,15 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(password, 10);
         
         // Create the super admin user
-        const superAdmin = await this.userModel.create({
+        const Admin = await this.userModel.create({
             email,
             name,
             password: hashedPassword,
-            role: UserRole.SUPER_ADMIN,
-            isFirstLogin: true
+            role: UserRole.ADMIN,
+            createdAt: new Date()
         });
 
-        return superAdmin;
+        return Admin;
     }
 
 
@@ -72,7 +74,10 @@ export class AuthService {
             email,
             name,
             password: hashedPassword,
+            createdAt: new Date()
         });
+        await this.mailService.sendWelcomeEmail(email, name, false);
+
     }
     async findUserById(userId: string): Promise<User> {
         const user = await this.userModel.findById(userId);
@@ -295,16 +300,9 @@ async updateAccountStatus(userId: string, isActive: boolean, adminRole: string):
 
 
 
-async getAllUsers(query: GetUsersQueryDto): Promise<PaginatedResponse<UserResponse>> {
+async getAllUsers(query: GetUsersQueryDto): Promise<UserResponse[]> {
     try {
-        const {
-            page = 1,
-            limit = 10,
-            search,
-            role,
-            sortBy = 'createdAt',
-            sortOrder = 'desc'
-        } = query;
+        const { search, role, sortBy = 'createdAt', sortOrder = 'desc' } = query;
 
         // Build filter conditions
         const filter: any = {};
@@ -322,48 +320,54 @@ async getAllUsers(query: GetUsersQueryDto): Promise<PaginatedResponse<UserRespon
             filter.role = role;
         }
 
-        // Calculate skip value for pagination
-        const skip = (page - 1) * limit;
-
         // Build sort object
         const sort: any = {};
         sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-        // Execute query with pagination
-        const [users, total] = await Promise.all([
-            this.userModel
-                .find(filter)
-                .select('_id name email role isActive createdAt')
-                .sort(sort)
-                .skip(skip)
-                .limit(limit)
-                .exec(),
-            this.userModel.countDocuments(filter)
-        ]);
+        // Execute query
+        const users = await this.userModel
+            .find(filter)
+            .select('_id name email role isActive createdAt')
+            .sort(sort)
+            .exec();
 
-        // Calculate total pages
-        const totalPages = Math.ceil(total / limit);
-
-        // Return paginated response
-        return {
-            data: users.map(user => ({
-                _id: user._id.toString(),
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                isActive: user.isActive,
-                createdAt: user.createdAt
-            })),
-            meta: {
-                total,
-                page,
-                limit,
-                totalPages
-            }
-        };
+        // Return users
+        return users.map(user => ({
+            _id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive,
+            createdAt: user.createdAt
+        }));
     } catch (error) {
         throw new BadRequestException('Failed to fetch users: ' + error.message);
     }
+}
+
+// Add this method to your AuthService class
+async updateProfile(userId: string, updateProfileDto: UpdateProfileDto): Promise<any> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Check if new email is already taken by another user
+    
+
+    // Update user
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+        userId,
+        {
+            name: updateProfileDto.name,
+        },
+        { new: true }
+    ).select('-password -refreshToken'); // Exclude sensitive fields
+
+    return {
+        name: updatedUser.name,
+        email: updatedUser.email
+    };
 }
 
 

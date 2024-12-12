@@ -14,23 +14,14 @@ import { RolesGuard } from './guards/roles.guard';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateAccountStatusDto } from './dto/update-account-status.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @Post('signup')
-    async signUp(@Body() signupDto: SignupDto) {
-        try {
-            await this.authService.signUp(signupDto);
-            return { message: 'User successfully registered' };
-        } catch (error) {
-            if (error instanceof BadRequestException) {
-                throw new BadRequestException(error.message);
-            }
-            throw new BadRequestException('An unexpected error occurred');
-        }
-    }
+    
 
     @Post('login')
     async login(@Body() loginDto: LoginDto) {
@@ -88,9 +79,21 @@ export class AuthController {
             updateUserRoleDto.role
         );
     }
-    @Post('create-super-admin')
-    async createSuperAdmin(@Body() signupDto: SignupDto) {
-        return this.authService.createSuperAdmin(signupDto);
+    @Post('createadmin')
+    async SigupasAdmin(@Body() signupDto: SignupDto) {
+        return this.authService.sigupasAdmin(signupDto);
+    }
+    @Post('signup')
+    async signUp(@Body() signupDto: SignupDto) {
+        try {
+            await this.authService.signUp(signupDto);
+            return { message: 'User successfully registered' };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw new BadRequestException(error.message);
+            }
+            throw new BadRequestException('An unexpected error occurred');
+        }
     }
 
     @UseGuards(AuthGuard, RolesGuard)
@@ -131,6 +134,27 @@ export class AuthController {
     async getAllUsers(@Query() query: GetUsersQueryDto) {
         return this.authService.getAllUsers(query);
     }
+
+    @Get('profile/:userId')
+    async getUserProfile(@Param('userId') userId: string) {
+        const user = await this.authService.findUserById(userId);
+        // Return only safe user data (excluding password and sensitive info)
+        return {
+            
+            name: user.name,
+            email: user.email,
+            
+        };
+    }
+
+    // Add this endpoint to your AuthController class
+@Put('profile/:userId')
+async updateProfile(
+    @Param('userId') userId: string,
+    @Body() updateProfileDto: UpdateProfileDto
+) {
+    return await this.authService.updateProfile(userId, updateProfileDto);
+}
 
    
 }
