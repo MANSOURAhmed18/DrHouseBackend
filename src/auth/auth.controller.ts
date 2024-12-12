@@ -15,6 +15,8 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateAccountStatusDto } from './dto/update-account-status.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { query } from 'express';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
 @Controller('auth')
@@ -40,36 +42,46 @@ export class AuthController {
     async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
         return this.authService.refreshTokens(refreshTokenDto.refreshToken);
     }
-    @UseGuards(AuthGuard)
-    @Put('change-password')
-    async changePassword(
-        @Body() changePasswordDto: ChangePasswordDto,
-        @Req() req,
-    ) {
-        return this.authService.changePassword(
-            req.userId,
-            changePasswordDto.oldPassword,
-            changePasswordDto.newPassword,
-        );
-    }
-   @Post('forgot-password')
-    async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-        return this.authService.forgotPassword(forgotPasswordDto.email);
-    }
+    
 
-    @Post('verify-reset-code')
-    async verifyResetCode(@Body() verifyResetCodeDto: VerifyResetCodeDto) {
-        const isValid = await this.authService.verifyResetCode(verifyResetCodeDto.email, verifyResetCodeDto.code);
-        if (!isValid) {
-            throw new BadRequestException('Invalid reset code');
-        }
-        return { message: 'Reset code verified' };
-    }
+    
 
     @Post('reset-password')
-    async resetPassword(@Body() verifyResetDto: VerifyResetDto): Promise<void> {
-        await this.authService.resetPassword(verifyResetDto.email, verifyResetDto.code, verifyResetDto.newPassword);
+    async resetPassword(
+        @Body() body: { 
+            verifiedToken: string;
+            newPassword: string;
+        }
+    ) {
+        await this.authService.resetPassword(
+            body.verifiedToken,
+            body.newPassword
+        );
+        return { message: 'Password has been reset successfully' };
     }
+    @Post('verify-reset-code')
+    async verifyResetCode(
+        @Body() body: { resetToken: string; code: string }
+    ) {
+        const result = await this.authService.verifyResetCode(
+            body.resetToken,
+            body.code
+        );
+        return { 
+            message: 'Code verified successfully',
+            verifiedToken: result.verifiedToken 
+        };
+    }
+
+    @Post('forgot-password')
+    async forgotPassword(@Body('email') email: string) {
+        const result = await this.authService.forgotPassword(email);
+        return { 
+            message: 'If the email exists, a reset code has been sent.',
+            resetToken: result.resetToken 
+        };
+    }
+    
     @UseGuards(AuthGuard, RolesGuard)
     @Roles(UserRole.SUPER_ADMIN)
     @Put('update-user-role')

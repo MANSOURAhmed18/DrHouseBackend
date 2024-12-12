@@ -18,6 +18,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { MulterModule } from '@nestjs/platform-express';
 import { AdminModule } from './admin/admin.module';
 import { ReclamationModule } from './reclamation/reclamation.module';
+import { OrderModule } from './order/order.module';
 @Module({
   imports: [
     // ServeStaticModule for serving static files
@@ -59,6 +60,7 @@ import { ReclamationModule } from './reclamation/reclamation.module';
     AuthModule,
     AdminModule,
     ReclamationModule,
+    OrderModule,
     
     
   ],

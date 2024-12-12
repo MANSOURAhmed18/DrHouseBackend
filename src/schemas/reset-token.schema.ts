@@ -4,9 +4,20 @@ import mongoose, { Document } from 'mongoose';
 @Schema({ versionKey: false, timestamps: true })
 export class ResetToken extends Document {
   @Prop({ required: true })
+  userId: string;
+
+  @Prop({ required: true })
   token: string;
-  @Prop({ required: true, type: mongoose.Types.ObjectId })
-  userId: mongoose.Types.ObjectId;
+
+  @Prop({ required: true })
+  resetToken: string;
+
+  @Prop()
+  verifiedToken?: string;
+
+  @Prop({ default: false })
+  isVerified: boolean;
+
   @Prop({ required: true })
   expiryDate: Date;
 }

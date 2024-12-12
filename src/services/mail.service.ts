@@ -64,6 +64,17 @@ export class MailService {
 
     await this.sendEmail(email, subject, content);
   }
+  
+  async sendPasswordResetConfirmation(email: string) {
+    const subject = 'Password Reset Successful';
+    const html = `
+        <h1>Password Reset Successful</h1>
+        <p>Your password has been successfully reset.</p>
+        <p>If you didn't make this change, please contact support immediately.</p>
+    `;
+
+    await this.sendEmail(email, subject, html);
+}
 
   async sendResetEmail(email: string, resetCode: string): Promise<void> {
     const mailOptions = {

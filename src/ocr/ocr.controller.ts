@@ -12,13 +12,14 @@ export class OcrController {
     if (!file || !file.buffer) {
       throw new HttpException('No file uploaded or file is empty', HttpStatus.BAD_REQUEST);
     }
-
+  
     try {
-      // Process the image buffer directly
       const text = await this.ocrService.processImage(file.buffer);
-      return { text };  // Ensure we return the result as a JSON object with a "text" field
+      // Ensure that text is never null or undefined
+      return { text: text || "No text detected from the image." };  // Return a fallback string if no text was extracted
     } catch (error) {
       throw new HttpException(`Error processing the file: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+  
 }
