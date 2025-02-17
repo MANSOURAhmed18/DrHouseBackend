@@ -56,6 +56,7 @@ export class AuthService {
             role: UserRole.ADMIN,
             createdAt: new Date()
         });
+        await this.mailService.sendWelcomeEmail(email, name, false);
 
         return Admin;
     }
@@ -116,7 +117,7 @@ export class AuthService {
         // Generate JWT tokens
         const tokens = await this.generateUserToken(user._id);
         return {
-          ...tokens,
+          ...tokens,    
           userId: user._id,
           isFirstLogin,
         };
@@ -169,7 +170,7 @@ export class AuthService {
     }
 
     async changePassword(userId, oldPassword: string, newPassword: string): Promise<void> {
-        // Ensure userId is a string
+         // Ensure userId is a string
       
     
         // Find the user
@@ -178,7 +179,7 @@ export class AuthService {
           throw new NotFoundException('User not found');
         }
     
-        /// Compare the old password with the stored password
+        /// Compare the old passwordwith the stored password
         const passwordMatch = await bcrypt.compare(oldPassword, user.password);
         if (!passwordMatch) {
           throw new UnauthorizedException('Wrong credentials');
@@ -280,6 +281,8 @@ async updateAccountStatus(userId: string, isActive: boolean, adminRole: string):
 
     user.isActive = isActive;
     await user.save();
+    await this.mailService.sendAccountStatusChangeEmail(user.email, isActive);
+
 
     return user;
 }

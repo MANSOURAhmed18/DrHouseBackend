@@ -74,7 +74,15 @@ export class ProgressService {
         userId: new Types.ObjectId(userId),
         date: { $gte: startDate },
       })
-      .sort({ date: 1 });
+      .sort({ date: 1 }).then(data=>{
+        return data.map((data:any) => {
+          return {
+            ...data,
+            date: data.date.toISOString().split('T')[0]+"",
+          
+          };
+        });
+      });
   }
 
   async getProgressStats(userId: string, days: number = 7) {

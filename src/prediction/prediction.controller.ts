@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Logger, Get, Query } from '@nestjs/common';
 import { PredictionService } from './prediction.service';
 
 @Controller('prediction')
@@ -11,6 +11,7 @@ export class PredictionController {
   async getPrediction(@Body('symptoms') symptoms: string[]) {
     // Log the incoming symptoms data
     this.logger.log(`Received symptoms: ${JSON.stringify(symptoms)}`);
+    await this.predictionService.trackSymptomSearch(symptoms);
 
     // Validate that symptoms is a non-empty array
     if (!Array.isArray(symptoms) || symptoms.length === 0) {
@@ -27,5 +28,12 @@ export class PredictionController {
     this.logger.log(`Prediction result: ${JSON.stringify(result)}`);
     
     return result;
+  }
+
+  @Get('most-searched')
+  async getMostSearchedSymptoms(
+      @Query('limit') limit: number = 10
+  ) {
+      return this.predictionService.getMostSearchedSymptoms(limit);
   }
 }

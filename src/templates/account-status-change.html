@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Status Update</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #eee;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .status-active {
+            background-color: #e7f7ea;
+            color: #0a5d1d;
+        }
+        .status-inactive {
+            background-color: #fde8e8;
+            color: #981b1b;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #1565c0;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+        }
+        .social-links {
+            margin-top: 20px;
+        }
+        .social-links a {
+            margin: 0 10px;
+            color: #666;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/api/placeholder/150/50" alt="Company Logo" class="logo">
+        </div>
+        <div class="content">
+            <h2>Account Status Update</h2>
+            {{#if isActive}}
+                <div class="status-badge status-active">Account Activated</div>
+                <p>Dear User,</p>
+                <p>Great news! Your account has been successfully activated. You now have full access to all our services and features.</p>
+                <p>What's next?</p>
+                <ul>
+                    <li>Complete your profile</li>
+                    <li>Explore our features</li>
+                    <li>Set up your preferences</li>
+                </ul>
+                <a href="#" class="button">Get Started</a>
+            {{else}}
+                <div class="status-badge status-inactive">Account Deactivated</div>
+                <p>Dear User,</p>
+                <p>Your account has been deactivated. This may be due to:</p>
+                <ul>
+                    <li>A request from you</li>
+                    <li>A violation of our terms of service</li>
+                    <li>Security concerns</li>
+                </ul>
+                <p>If you believe this was done in error or need assistance, please don't hesitate to contact our support team.</p>
+                <a href="#" class="button">Contact Support</a>
+            {{/if}}
+        </div>
+        <div class="footer">
+            <p>This is an automated message, please do not reply directly to this email.</p>
+            <p>If you need assistance, please contact our support team</p>
+            <div class="social-links">
+                <a href="#">Twitter</a> |
+                <a href="#">Facebook</a> |
+                <a href="#">LinkedIn</a>
+            </div>
+            <p>&copy; {{currentYear}} Your Company Name. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
